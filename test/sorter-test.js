@@ -27,7 +27,7 @@ describe('sorter', function () {
       expect(onNotify.calledOnce).to.be.true
       expect(onNotify.args[0][0]).to.deep.equal({
         event: 'init',
-        from: 0,
+        from: 1,
         array: [
           {
             path: 'asd',
@@ -61,11 +61,11 @@ describe('sorter', function () {
     })
 
     it('should update on "add" correctly', function () {
-      inst.sorter({event: 'add', path: 'aaa', value: 44})
+      inst.sorter({event: 'add', path: 'aab', value: 44})
       expect(onNotify.calledTwice).to.be.true
       expect(onNotify.args[1][0]).to.deep.equal({
         event: 'insert',
-        path: 'aaa',
+        path: 'aab',
         value: 44,
         index: 0
       })
@@ -76,7 +76,6 @@ describe('sorter', function () {
       expect(onNotify.calledTwice).to.be.true
       expect(onNotify.args[1][0]).to.deep.equal({
         event: 'change',
-        path: 'asd',
         value: 44,
         index: 0
       })
@@ -151,24 +150,35 @@ describe('sorter', function () {
       })
     })
 
-    it('should update on "change" -> move correctly', function () {
+    it('should update on "change" correctly', function () {
       inst.sorter({event: 'change', path: 'asd', value: 1.1})
       expect(onNotify.calledTwice).to.be.true
       expect(onNotify.args[1][0]).to.deep.equal({
         event: 'change',
         value: 1.1,
+        index: 0
+      })
+    })
+
+    it('should update on "change" -> move to back correctly', function () {
+      inst.sorter({event: 'change', path: 'asd', value: 3.5})
+      expect(onNotify.calledTwice).to.be.true
+      expect(onNotify.args[1][0]).to.deep.equal({
+        event: 'move',
+        value: 3.5,
+        prevIndex: 0,
         index: 2
       })
     })
 
-    it('should update on "change" -> move correctly', function () {
-      inst.sorter({event: 'change', path: 'asd', value: 4})
+    it('should update on "change" -> move to front correctly', function () {
+      inst.sorter({event: 'change', path: 'zoo', value: 0.1})
       expect(onNotify.calledTwice).to.be.true
       expect(onNotify.args[1][0]).to.deep.equal({
         event: 'move',
-        value: 4,
-        prevIndex: 0,
-        index: 2
+        value: 0.1,
+        prevIndex: 2,
+        index: 0
       })
     })
   })
