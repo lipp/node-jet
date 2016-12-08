@@ -12,37 +12,36 @@ describe('sorter', function () {
       inst = sorter.create({
         sort: {
           byPath: true,
-          from: 1,
-          to: 3
+          from: 1, // inclusive start index JS style (first is 0,... 1->second)
+          to: 3 // incluse max end index
         }
       }, onNotify)
       inst.sorter({event: 'add', value: 123, path: 'asd'}, true)
       inst.sorter({event: 'add', path: 'zoo'}, true)
       inst.sorter({event: 'add', value: 123, path: 'bar'}, true)
+      inst.sorter({event: 'add', value: 123, path: 'aaa'}, true) // this will be skippped (index 0)
       inst.flush()
     })
 
     it('should init/flush correctly', function () {
       expect(onNotify.calledOnce).to.be.true
       expect(onNotify.args[0][0]).to.deep.equal({
-        changes: [
+        event: 'init',
+        from: 0,
+        array: [
           {
             path: 'asd',
-            value: 123,
-            index: 1
+            value: 123
           },
           {
             path: 'bar',
-            value: 123,
-            index: 2
+            value: 123
           },
           {
             path: 'zoo',
-            index: 3,
             value: undefined // not neccessary
           }
-        ],
-        n: 3
+        ]
       })
     })
 
@@ -50,14 +49,8 @@ describe('sorter', function () {
       inst.sorter({event: 'remove', path: 'bar'})
       expect(onNotify.calledTwice).to.be.true
       expect(onNotify.args[1][0]).to.deep.equal({
-        changes: [
-          {
-            path: 'zoo',
-            index: 2,
-            value: undefined // not neccessary
-          }
-        ],
-        n: 2
+        event: 'remove',
+        index: 1
       })
     })
 
@@ -71,24 +64,10 @@ describe('sorter', function () {
       inst.sorter({event: 'add', path: 'aaa', value: 44})
       expect(onNotify.calledTwice).to.be.true
       expect(onNotify.args[1][0]).to.deep.equal({
-        changes: [
-          {
-            path: 'aaa',
-            value: 44,
-            index: 1
-          },
-          {
-            path: 'asd',
-            value: 123,
-            index: 2
-          },
-          {
-            path: 'bar',
-            index: 3,
-            value: 123
-          }
-        ],
-        n: 3
+        event: 'insert',
+        path: 'aaa',
+        value: 44,
+        index: 0
       })
     })
 
@@ -96,14 +75,10 @@ describe('sorter', function () {
       inst.sorter({event: 'change', path: 'asd', value: 44})
       expect(onNotify.calledTwice).to.be.true
       expect(onNotify.args[1][0]).to.deep.equal({
-        changes: [
-          {
-            path: 'asd',
-            value: 44,
-            index: 1
-          }
-        ],
-        n: 3
+        event: 'change',
+        path: 'asd',
+        value: 44,
+        index: 0
       })
     })
   })
@@ -123,30 +98,29 @@ describe('sorter', function () {
       inst.sorter({event: 'add', value: 1, path: 'asd'}, true)
       inst.sorter({event: 'add', value: 3, path: 'zoo'}, true)
       inst.sorter({event: 'add', value: 2, path: 'bar'}, true)
+      inst.sorter({event: 'add', value: 0, path: 'uyt'}, true)
       inst.flush()
     })
 
     it('should init/flush correctly', function () {
       expect(onNotify.calledOnce).to.be.true
       expect(onNotify.args[0][0]).to.deep.equal({
-        changes: [
+        event: 'init',
+        from: 1,
+        array: [
           {
             path: 'asd',
-            value: 1,
-            index: 1
+            value: 1
           },
           {
             path: 'bar',
-            value: 2,
-            index: 2
+            value: 2
           },
           {
             path: 'zoo',
-            value: 3,
-            index: 3
+            value: 3
           }
-        ],
-        n: 3
+        ]
       })
     })
 
@@ -154,20 +128,15 @@ describe('sorter', function () {
       inst.sorter({event: 'remove', path: 'bar'})
       expect(onNotify.calledTwice).to.be.true
       expect(onNotify.args[1][0]).to.deep.equal({
-        changes: [
-          {
-            path: 'zoo',
-            value: 3,
-            index: 2
-          }
-        ],
-        n: 2
+        event: 'remove',
+        index: 1
       })
     })
 
     it('should ignore elements out of range', function () {
       inst.sorter({event: 'add', path: 'zz0', value: 1000})
-      inst.sorter({event: 'remove', path: 'zz0', value: 1000})
+      inst.sorter({event: 'change', path: 'zz0', value: 10000})
+      inst.sorter({event: 'remove', path: 'zz0', value: 10000})
       expect(onNotify.calledOnce).to.be.true
     })
 
@@ -175,49 +144,31 @@ describe('sorter', function () {
       inst.sorter({event: 'add', path: 'z00', value: 0.3})
       expect(onNotify.calledTwice).to.be.true
       expect(onNotify.args[1][0]).to.deep.equal({
-        changes: [
-          {
-            path: 'z00',
-            value: 0.3,
-            index: 1
-          },
-          {
-            path: 'asd',
-            value: 1,
-            index: 2
-          },
-          {
-            path: 'bar',
-            index: 3,
-            value: 2
-          }
-        ],
-        n: 3
+        event: 'insert',
+        path: 'z00',
+        value: 0.3,
+        index: 0
       })
     })
 
-    it('should update on "change" correctly', function () {
+    it('should update on "change" -> move correctly', function () {
+      inst.sorter({event: 'change', path: 'asd', value: 1.1})
+      expect(onNotify.calledTwice).to.be.true
+      expect(onNotify.args[1][0]).to.deep.equal({
+        event: 'change',
+        value: 1.1,
+        index: 2
+      })
+    })
+
+    it('should update on "change" -> move correctly', function () {
       inst.sorter({event: 'change', path: 'asd', value: 4})
       expect(onNotify.calledTwice).to.be.true
       expect(onNotify.args[1][0]).to.deep.equal({
-        changes: [
-          {
-            path: 'bar',
-            value: 2,
-            index: 1
-          },
-          {
-            path: 'zoo',
-            value: 3,
-            index: 2
-          },
-          {
-            path: 'asd',
-            value: 4,
-            index: 3
-          }
-        ],
-        n: 3
+        event: 'move',
+        value: 4,
+        prevIndex: 0,
+        index: 2
       })
     })
   })
